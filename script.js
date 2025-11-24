@@ -3,69 +3,84 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuToggle = document.querySelector('.mobile-menu-toggle');
     const navMenu = document.querySelector('.nav-menu');
 
-    menuToggle.addEventListener('click', () => {
-        navMenu.classList.toggle('active');
-        // Animate hamburger icon
-        const spans = menuToggle.querySelectorAll('span');
-        if (navMenu.classList.contains('active')) {
-            spans[0].style.transform = 'rotate(45deg) translate(5px, 5px)';
-            spans[1].style.opacity = '0';
-            spans[2].style.transform = 'rotate(-45deg) translate(5px, -5px)';
-        } else {
-            spans[0].style.transform = 'none';
-            spans[1].style.opacity = '1';
-            spans[2].style.transform = 'none';
-        }
-    });
-
-    // Close mobile menu when a link is clicked
-    document.querySelectorAll('.nav-menu a').forEach(link => {
-        link.addEventListener('click', () => {
-            navMenu.classList.remove('active');
-            const spans = menuToggle.querySelectorAll('span');
-            spans[0].style.transform = 'none';
-            spans[1].style.opacity = '1';
-            spans[2].style.transform = 'none';
+    if (menuToggle && navMenu) {
+        menuToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            menuToggle.classList.toggle('active');
         });
-    });
+    }
 
-    // FAQ Accordion
-    const faqItems = document.querySelectorAll('.faq-item');
+    // Carousel Logic (Infinite Loop Sliding)
+    const track = document.querySelector('.carousel-track');
+    const slides = Array.from(document.querySelectorAll('.carousel-slide'));
+    const nextBtn = document.querySelector('.next-btn');
+    const prevBtn = document.querySelector('.prev-btn');
 
-    faqItems.forEach(item => {
-        const question = item.querySelector('.faq-question');
-        
-        question.addEventListener('click', () => {
-            // Close other open items
-            faqItems.forEach(otherItem => {
-                if (otherItem !== item && otherItem.classList.contains('active')) {
-                    otherItem.classList.remove('active');
-                }
-            });
+    if (track && slides.length > 0) {
+        const slideWidth = 100; // 100%
 
-            // Toggle current item
-            item.classList.toggle('active');
-        });
-    });
+        // Clone first and last slides for infinite loop
+        const firstClone = slides[0].cloneNode(true);
+        const lastClone = slides[slides.length - 1].cloneNode(true);
 
-    // Smooth Scroll for Anchor Links (Polyfill-like behavior if needed, but CSS scroll-behavior is usually enough)
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            const targetId = this.getAttribute('href');
-            if (targetId === '#') return;
-            
-            const targetElement = document.querySelector(targetId);
-            if (targetElement) {
-                const headerOffset = 80; // Height of fixed header
-                const elementPosition = targetElement.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        // Add clones to DOM
+        track.appendChild(firstClone);
+        track.insertBefore(lastClone, slides[0]);
 
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: "smooth"
-                });
+        // Update slides list to include clones
+        const allSlides = document.querySelectorAll('.carousel-slide');
+
+        // Initial state: show first real slide (index 1)
+        let currentIndex = 1;
+        track.style.transform = `translateX(-${currentIndex * slideWidth}%)`;
+
+        let isTransitioning = false;
+
+        const updateSlidePosition = (index, animate = true) => {
+            if (animate) {
+                track.style.transition = 'transform 0.5s ease-in-out';
+            } else {
+                track.style.transition = 'none';
+            }
+            track.style.transform = `translateX(-${index * slideWidth}%)`;
+        };
+
+        const moveToNextSlide = () => {
+            if (isTransitioning) return;
+            isTransitioning = true;
+            currentIndex++;
+            updateSlidePosition(currentIndex);
+        };
+
+        const moveToPrevSlide = () => {
+            if (isTransitioning) return;
+            isTransitioning = true;
+            currentIndex--;
+            updateSlidePosition(currentIndex);
+        };
+
+        // Handle Transition End for Infinite Loop
+        track.addEventListener('transitionend', () => {
+            isTransitioning = false;
+
+            // If at last clone (after real last slide), jump to real first slide
+            if (currentIndex === allSlides.length - 1) {
+                currentIndex = 1;
+                updateSlidePosition(currentIndex, false);
+            }
+
+            // If at first clone (before real first slide), jump to real last slide
+            if (currentIndex === 0) {
+                currentIndex = allSlides.length - 2;
+                updateSlidePosition(currentIndex, false);
             }
         });
-    });
+
+        // Event Listeners
+        if (nextBtn) nextBtn.addEventListener('click', moveToNextSlide);
+        if (prevBtn) prevBtn.addEventListener('click', moveToPrevSlide);
+
+        // Optional: Auto-play
+        // setInterval(moveToNextSlide, 5000);
+    }
 });
